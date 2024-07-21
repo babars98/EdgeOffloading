@@ -1,4 +1,4 @@
-package org.Offload;
+package org.edgeoffload;
 
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.Log;
@@ -9,7 +9,6 @@ import org.cloudbus.cloudsim.power.PowerHost;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
-import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
 import org.fog.entities.FogDeviceCharacteristics;
 import org.fog.policy.AppModuleAllocationPolicy;
