@@ -1,16 +1,16 @@
 package org.edgeoffload;
 
 import org.fog.application.DAG;
-import org.edgeoffload.model.Module;
 import org.fog.application.Application;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 
 public class ApplicationDependency {
 
     public org.fog.application.DAG createApplicationDepedency(){
-
 
 
         ApplicationHandler applicationHandler = new ApplicationHandler();
@@ -32,6 +32,32 @@ public class ApplicationDependency {
 
 
         return dag;
+    }
+
+    public List<List<Application>> createApplicationDepdendencyList(List<Application> applications, Stack dag){
+
+        List<List<Application>> appsList = new ArrayList<>();
+
+        List<Application> list = new ArrayList<>();
+
+        //Add list of dependent application the list
+        while (dag.empty() == false){
+
+            Application app = BL.getApplicationbyName(applications, dag.pop().toString());
+            list.add(app);
+            applications.remove(app);
+        }
+        appsList.add(list);
+
+        //Add all the independent applications to the list
+        for(Application app: applications){
+            List<Application> application = new ArrayList<>();
+            application.add(app);
+            appsList.add(application);
+        }
+
+        return appsList;
+
     }
 
 }

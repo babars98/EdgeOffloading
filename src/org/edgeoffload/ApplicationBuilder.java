@@ -16,18 +16,18 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("image-capture", 512);
-        application.addAppModule("image-processor", 1024);
-        application.addAppModule("image-store", 512);
+        application.addAppModule("image-capture", 256);
+        application.addAppModule("image-processor", 512);
+        application.addAppModule("image-store", 128);
         /*
          * Connecting the application modules (vertices) in the application model (directed graph) with edges
          */
-        application.addAppEdge("CAMERA", "image-capture", 1000, 500, "CAMERA", Tuple.UP, AppEdge.SENSOR);
+        application.addAppEdge("CAMERA", "image-capture", 700, 500, "CAMERA", Tuple.UP, AppEdge.SENSOR);
         application.addAppEdge("image-capture", "image-processor",
-                3000, 1000, "RAW_IMAGE",Tuple.UP, AppEdge.MODULE);
+                1500, 1000, "RAW_IMAGE",Tuple.UP, AppEdge.MODULE);
         // adding edge from Slot Detector to PTZ CONTROL (actuator)
         application.addAppEdge("image-processor", "image-store", 0,
-                1000, 500, "PROCESSED_IMAGE",
+                600, 500, "PROCESSED_IMAGE",
                 Tuple.UP, AppEdge.MODULE);
 
         application.addTupleMapping("image-capture", "CAMERA", "SENSOR",
@@ -53,13 +53,13 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("image-retrieve", 512);
-        application.addAppModule("image-processor", 2048);
-        application.addAppModule("image-store", 512);
+        application.addAppModule("image-retrieve", 256);
+        application.addAppModule("image-processor", 512);
+        application.addAppModule("image-store", 128);
         /*
          * Connecting the application modules (vertices) in the application model (directed graph) with edges
          */
-        application.addAppEdge("image-retrieve", "image-processor", 2000, 1500, "IMAGE", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("image-retrieve", "image-processor", 800, 1500, "IMAGE", Tuple.UP, AppEdge.MODULE);
         application.addAppEdge("image-processor", "image-store",
                 2000, 1500, "PROCESSED_IMAGE",Tuple.UP, AppEdge.MODULE);
         // adding edge from Slot Detector to PTZ CONTROL (actuator)
@@ -87,13 +87,13 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("image-retrieve", 512);
+        application.addAppModule("image-retrieve", 256);
         application.addAppModule("image-classifier", 2048);
-        application.addAppModule("image-store", 512);
+        application.addAppModule("image-store", 128);
         /*
          * Connecting the application modules (vertices) in the application model (directed graph) with edges
          */
-        application.addAppEdge("image-retrieve", "image-classifier", 2000, 1500, "IMAGE", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("image-retrieve", "image-classifier", 800, 1500, "IMAGE", Tuple.UP, AppEdge.MODULE);
         application.addAppEdge("image-classifier", "image-store",
                 3000, 1500, "CLASSIFIED_IMAGE",Tuple.UP, AppEdge.MODULE);
         // adding edge from Slot Detector to PTZ CONTROL (actuator)
@@ -121,8 +121,8 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("temp-sensor", 256);
-        application.addAppModule("temp-analyzer", 512);
+        application.addAppModule("temp-sensor", 128);
+        application.addAppModule("temp-analyzer", 256);
 
         application.addAppEdge("temp-sensor", "temp-analyzer", 1000, 500, "SENSOR", Tuple.UP, AppEdge.SENSOR);
         application.addAppEdge("temp-analyzer", "fan-controller", 1000, 500, "FAN_CONTROL", Tuple.UP, AppEdge.ACTUATOR);
@@ -145,17 +145,17 @@ public class ApplicationBuilder {
 
         Application application = Application.createApplication(appId, userId);
 
-        application.addAppModule("Module1", 10);
-        application.addAppModule("Module2", 10);
-        application.addAppModule("Module3", 10);
-        application.addAppModule("Module4", 10);
+        application.addAppModule("Module1", 256);
+        application.addAppModule("Module2", 256);
+        application.addAppModule("Module3", 512);
+        application.addAppModule("Module4", 1024);
 
-        application.addAppEdge("Sensor", "Module1", 3000, 500, "Sen-sor", Tuple.UP, AppEdge.SENSOR);
-        application.addAppEdge("Module1", "Module2", 100, 1000, "Pro-cessedData-1", Tuple.UP, AppEdge.MODULE);
-        application.addAppEdge("Module2", "Module3", 100, 1000, "Pro-cessedData-2", Tuple.UP, AppEdge.MODULE);
-        application.addAppEdge("Module3", "Module4", 100, 1000, "Pro-cessedData-3", Tuple.UP, AppEdge.MODULE);
-        application.addAppEdge("Module4", "Module1", 100, 1000, "Pro-cessedData-4", Tuple.DOWN, AppEdge.MODULE);
-        application.addAppEdge("Module1", "Actuators", 100, 50, "Out-putData", Tuple.DOWN, AppEdge.ACTUATOR);
+        application.addAppEdge("Sensor", "Module1", 500, 500, "Sen-sor", Tuple.UP, AppEdge.SENSOR);
+        application.addAppEdge("Module1", "Module2", 700, 1000, "Pro-cessedData-1", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("Module2", "Module3", 1000, 1000, "Pro-cessedData-2", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("Module3", "Module4", 1500, 1000, "Pro-cessedData-3", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("Module4", "Module1", 2000, 1000, "Pro-cessedData-4", Tuple.DOWN, AppEdge.MODULE);
+        application.addAppEdge("Module1", "Actuators", 800, 50, "Out-putData", Tuple.DOWN, AppEdge.ACTUATOR);
 
         application.addTupleMapping("Module1", "Sensor", "Processed-Data-1", new FractionalSelectivity(1.0));
         application.addTupleMapping("Module2", "ProcessedData-1", "ProcessedData-2", new FractionalSelectivity(1.0));

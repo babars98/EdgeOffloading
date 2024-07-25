@@ -2,12 +2,21 @@ package org.edgeoffload;
 
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.fog.application.AppModule;
 import org.fog.application.Application;
 import org.fog.application.DAG;
+import org.fog.entities.Actuator;
 import org.fog.entities.FogDevice;
+import org.fog.entities.Sensor;
+import org.fog.placement.Controller;
+import org.fog.placement.ModuleMapping;
+import org.fog.placement.ModulePlacementEdgewards;
+import org.fog.utils.TimeKeeper;
+import org.fog.utils.distribution.DeterministicDistribution;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Stack;
 
 public class OffloadMain {
@@ -31,12 +40,36 @@ public class OffloadMain {
 
         Stack stack = dag.topologicalSort();
 
-        // Print contents of stack
-        while (stack.empty() == false)
-            System.out.print(stack.pop() + " ");
+        List<List<Application>> applist =  applicationDependency.createApplicationDepdendencyList(applicationslist, stack);
 
-        System.out.println("DAG Representation:");
+        EdgeDevice edgeDevice = new EdgeDevice();
+        List<FogDevice> fogDevices = edgeDevice.getFogDevicesList();
 
+        OffloadAlgorithm.offloadingStrategy(applist, fogDevices);
 
+        Application cameraApplication = applicationHandler.getCameraApplicaion();
+        ModuleMapping moduleMapping = ModuleMapping.createModuleMapping(); // initializing a module mapping
+
+        for(FogDevice device : fogDevices){
+            if(device.getName().startsWith("m"))
+                moduleMapping.addModuleToDevice("image-capture", device.getName());  // fixing 1 instance of the Motion Detector module to each Smart Camera
+        }
+
+        //for(AppModule appModule: cameraApplication.getModules())
+         //   moduleMapping.addModuleToDevice(appModule.getName(), edgeDevice.mobileDevice().getName());
+
+        List<FogDevice> devices = new ArrayList<>();
+        devices.add(edgeDevice.createMobileDevice());
+
+        // Add the application to the fog devices
+        Controller controller = new Controller("master-controller", devices, new ArrayList<>(), new ArrayList<>());
+        ModulePlacementEdgewards placement = new ModulePlacementEdgewards(devices, new ArrayList<>(), new ArrayList<>(), applicationHandler.getCameraApplicaion(), moduleMapping);
+        controller.submitApplication(cameraApplication, 0, placement);
+
+        TimeKeeper.getInstance().setSimulationStartTime(Calendar.getInstance().getTimeInMillis());
+
+        CloudSim.startSimulation();
+
+        CloudSim.stopSimulation();
     }
 }

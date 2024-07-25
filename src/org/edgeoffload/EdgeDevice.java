@@ -7,6 +7,7 @@ import org.cloudbus.cloudsim.power.PowerHost;
 import org.cloudbus.cloudsim.provisioners.RamProvisionerSimple;
 import org.cloudbus.cloudsim.sdn.overbooking.BwProvisionerOverbooking;
 import org.cloudbus.cloudsim.sdn.overbooking.PeProvisionerOverbooking;
+import org.fog.entities.FogDevice;
 import org.fog.entities.FogDeviceCharacteristics;
 import org.fog.policy.AppModuleAllocationPolicy;
 import org.fog.scheduler.StreamOperatorScheduler;
@@ -17,8 +18,52 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-public class FogDevice {
-    public org.fog.entities.FogDevice createAFogDevice(String nodeName, long mips, int ram, long upBw, long downBw, int level, double ratePerMips, double busyPower, double idlePower) {
+public class EdgeDevice {
+
+    public FogDevice createEdgeDevice1(){
+        FogDevice dept = createAFogDevice("FogDevice1", 10000, 4096, 10000, 10000, 1, 0.0, 107.339, 83.4333);
+        dept.setUplinkLatency(5);
+        return dept;
+    }
+
+    public FogDevice createEdgeDevice2(){
+        FogDevice dept = createAFogDevice("FogDevice2", 15000, 8096, 10000, 10000, 1, 0.0, 107.339, 83.4333);
+        dept.setUplinkLatency(7);
+        return dept;
+    }
+
+    public FogDevice createEdgeDevice3(){
+        FogDevice dept = createAFogDevice("FogDevice3", 25000, 12000, 10000, 10000, 1, 0.0, 107.339, 83.4333);
+        dept.setUplinkLatency(12);
+        return dept;
+    }
+
+    public FogDevice createMobileDevice(){
+        FogDevice mobile = createAFogDevice("mobile", 3000, 1024, 10000, 270, 3, 0, 87.53, 82.44);
+        mobile.setUplinkLatency(10);
+        mobile.setUplinkLatency(1);
+        return mobile;
+    }
+
+    public FogDevice createCloud() {
+        org.fog.entities.FogDevice cloud = createAFogDevice("cloud", 44000, 32000, 100, 10000, 0, 0.01, 16*103, 16*83.25); // creates the fog device Cloud at the apex of the hierarchy with level=0
+        cloud.setParentId(-1);
+        cloud.setUplinkLatency(100);
+        return cloud;
+    }
+
+    public List<FogDevice> getFogDevicesList(){
+        List<FogDevice> fogDevices = new ArrayList<>();
+        fogDevices.add(createEdgeDevice1());
+        fogDevices.add(createEdgeDevice2());
+        fogDevices.add(createEdgeDevice3());
+        fogDevices.add(createMobileDevice());
+        fogDevices.add(createCloud());
+
+        return  fogDevices;
+    }
+
+    private org.fog.entities.FogDevice createAFogDevice(String nodeName, long mips, int ram, long upBw, long downBw, int level, double ratePerMips, double busyPower, double idlePower) {
         List<Pe> peList = new ArrayList<Pe>();
         peList.add(new Pe(0, new PeProvisionerOverbooking(mips)));
         int hostId = FogUtils.generateEntityId();

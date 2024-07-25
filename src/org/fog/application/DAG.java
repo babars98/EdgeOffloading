@@ -66,8 +66,8 @@ public class DAG {
                 topologicalSortUtil(vertice, visited, stack);
 
         // Print contents of stack
-        while (stack.empty() == false)
-            System.out.print(stack.pop() + " ");
+        //while (stack.empty() == false)
+           // System.out.print(stack.pop() + " ");
 
         return stack;
     }
