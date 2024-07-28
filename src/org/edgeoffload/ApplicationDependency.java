@@ -1,12 +1,10 @@
 package org.edgeoffload;
 
+import org.edgeoffload.model.Task;
 import org.fog.application.DAG;
 import org.fog.application.Application;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 public class ApplicationDependency {
 
@@ -34,29 +32,41 @@ public class ApplicationDependency {
         return dag;
     }
 
-    public List<List<Application>> createApplicationDepdendencyList(List<Application> applications, Stack dag){
+    public List<Task> createApplicationDepdendencyList(List<Application> applications, List<Application> independentApps, List<Stack> dag){
 
-        List<List<Application>> appsList = new ArrayList<>();
+        List<Task> list = new ArrayList<>();
 
-        List<Application> list = new ArrayList<>();
+        //Add all the independent tasks to list first
+        for(Application app: independentApps){
+
+            list.add(new Task(
+                    app.getAppId(),
+                    UUID.randomUUID().toString(),
+                    BL.calculateMips(app),
+                    BL.calculateRam(app),
+                    false
+            ));
+        }
 
         //Add list of dependent application the list
-        while (dag.empty() == false){
+        for(Stack stack: dag){
 
-            Application app = BL.getApplicationbyName(applications, dag.pop().toString());
-            list.add(app);
-            applications.remove(app);
+            String uId =  UUID.randomUUID().toString();
+
+            while (stack.empty() == false){
+                Application app = BL.getApplicationbyName(applications, stack.pop().toString());
+
+                list.add(new Task(
+                        app.getAppId(),
+                        uId,
+                        BL.calculateMips(app),
+                        BL.calculateRam(app),
+                        true
+                ));
+            }
         }
-        appsList.add(list);
 
-        //Add all the independent applications to the list
-        for(Application app: applications){
-            List<Application> application = new ArrayList<>();
-            application.add(app);
-            appsList.add(application);
-        }
-
-        return appsList;
+        return list;
 
     }
 

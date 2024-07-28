@@ -1,7 +1,9 @@
 package org.edgeoffload;
 
+import org.edgeoffload.model.EdgeDevice;
 import org.edgeoffload.model.FogDeviceResource;
 import org.edgeoffload.model.ResourceRequirement;
+import org.edgeoffload.model.Task;
 import org.fog.application.AppEdge;
 import org.fog.application.AppModule;
 import org.fog.application.Application;
@@ -38,6 +40,42 @@ public  class BL {
         return new ResourceRequirement(totalMips, totalRam, totalBandwidth);
     }
 
+    public static int calculateMips(Application application) {
+        long totalMips = 0;
+            for (AppModule module : application.getModules()) {
+                totalMips += module.getMips();
+            }
+
+        return (int)totalMips;
+    }
+
+    public static int calculateRam(Application application) {
+        long totalRam = 0;
+        for (AppModule module : application.getModules()) {
+            totalRam += module.getRam();
+        }
+
+        return (int)totalRam;
+    }
+
+    public static int calculateTotalMips(List<Task> tasks){
+        int totalMips = 0;
+        for (Task task : tasks) {
+            totalMips += task.getMips();
+        }
+
+        return totalMips;
+    }
+
+    public static int calculateTotalRam(List<Task> tasks){
+        int totalRam = 0;
+        for (Task task : tasks) {
+            totalRam += task.getMips();
+        }
+
+        return totalRam;
+    }
+
     public static List<FogDeviceResource> createFogDeviceResourceList(List<FogDevice> fogDevices){
         List<FogDeviceResource> availableResource = new ArrayList<>();
 
@@ -52,5 +90,21 @@ public  class BL {
         }
 
         return availableResource;
+    }
+
+    public static List<EdgeDevice> mapEdgeDevicesToList(List<FogDevice> devices){
+        List<EdgeDevice> edgeDevices = new ArrayList<>();
+
+        for(FogDevice fogDevice: devices){
+
+            edgeDevices.add(new EdgeDevice(
+                    fogDevice.getId(),
+                    fogDevice.getName(),
+                    fogDevice.getVmAllocationPolicy().getHost(fogDevice.getHost().getId(), fogDevice.getId()).getTotalMips(),
+                    fogDevice.getVmAllocationPolicy().getHost(fogDevice.getHost().getId(), fogDevice.getId()).getRam(),
+                    (int)fogDevice.getUplinkLatency()
+            ));
+        }
+        return  edgeDevices;
     }
 }

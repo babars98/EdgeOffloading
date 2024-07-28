@@ -4,7 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class EdgeDevice {
-    private String id;
+    private int id;
+    private String name;
     private int totalMips;
     private int totalRam;
     private int availableMips;
@@ -12,8 +13,9 @@ public class EdgeDevice {
     private int latency;
     private List<Task> tasks;
 
-    public EdgeDevice(String id, int mips, int ram, int latency) {
+    public EdgeDevice(int id, String name, int mips, int ram, int latency) {
         this.id = id;
+        this.name = name;
         this.totalMips = mips;
         this.totalRam = ram;
         this.availableMips = mips;
@@ -35,14 +37,15 @@ public class EdgeDevice {
     }
 
     public boolean canAccommodate(Task task) {
-        return availableMips >= task.getMips() && availableRam >= task.getRam();
+        return availableMips * .9 >= task.getMips() && availableRam * .9 >= task.getRam();
     }
 
     public List<Task> getTasks() { return tasks; }
+    public String getName(){return name;}
     public int getTotalMips() { return totalMips; }
     public int getTotalRam() { return totalRam; }
     public int getAvailableMips() { return availableMips; }
     public int getAvailableRam() { return availableRam; }
     public int getLatency() {return latency;}
-    public String getId() { return id; }
+    public int getId() { return id; }
 }

@@ -2,17 +2,13 @@ package org.edgeoffload;
 
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
-import org.fog.application.AppModule;
+import org.edgeoffload.model.Task;
 import org.fog.application.Application;
-import org.fog.application.DAG;
-import org.fog.entities.Actuator;
 import org.fog.entities.FogDevice;
-import org.fog.entities.Sensor;
 import org.fog.placement.Controller;
 import org.fog.placement.ModuleMapping;
 import org.fog.placement.ModulePlacementEdgewards;
 import org.fog.utils.TimeKeeper;
-import org.fog.utils.distribution.DeterministicDistribution;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -32,20 +28,31 @@ public class OffloadMain {
 
 
         ApplicationHandler applicationHandler = new ApplicationHandler();
-        ArrayList<Application> applicationslist = applicationHandler.ListApplications();
+        ArrayList<Application> applicationslist = new ArrayList<>();
 
+        //independent tasks
+        applicationslist.add(applicationHandler.getTempControlApplication());
+        applicationslist.add(applicationHandler.getUniDirectionalApplication());
+
+        //dependent tasks
         ApplicationDependency applicationDependency = new ApplicationDependency();
 
         org.fog.application.DAG dag = applicationDependency.createApplicationDepedency();
 
         Stack stack = dag.topologicalSort();
 
-        List<List<Application>> applist =  applicationDependency.createApplicationDepdendencyList(applicationslist, stack);
+        List<Stack> stacks = new ArrayList<>();
+        stacks.add(stack);
 
-        EdgeDevice edgeDevice = new EdgeDevice();
+        List<Task> tasks =  applicationDependency.createApplicationDepdendencyList(applicationHandler.ListApplications(), applicationslist, stacks);
+
+        EdgeServer edgeDevice = new EdgeServer();
         List<FogDevice> fogDevices = edgeDevice.getFogDevicesList();
 
-        OffloadAlgorithm.offloadingStrategy(applist, fogDevices);
+        TaskOffloader offloader = new TaskOffloader(BL.mapEdgeDevicesToList(fogDevices), tasks);
+        offloader.deployTask();
+
+       // OffloadAlgorithm.offloadingStrategy(applist, fogDevices);
 
         Application cameraApplication = applicationHandler.getCameraApplicaion();
         ModuleMapping moduleMapping = ModuleMapping.createModuleMapping(); // initializing a module mapping

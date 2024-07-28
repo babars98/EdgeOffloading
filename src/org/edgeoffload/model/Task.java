@@ -16,8 +16,8 @@ public class Task {
         this.isDependent = isDependent;
     }
 
-    private String getId() {return id;}
-    private String getUniqueID() { return uniqueID; }
+    public String getId() {return id;}
+    public String getUniqueID() { return uniqueID; }
     public int getMips() { return mips; }
     public int getRam() { return ram; }
     public boolean isDependent() { return isDependent; }

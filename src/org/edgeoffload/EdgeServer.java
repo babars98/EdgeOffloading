@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-public class EdgeDevice {
+public class EdgeServer {
 
     public FogDevice createEdgeDevice1(){
         FogDevice dept = createAFogDevice("FogDevice1", 10000, 4096, 10000, 10000, 1, 0.0, 107.339, 83.4333);
