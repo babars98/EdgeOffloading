@@ -2,20 +2,26 @@ package org.edgeoffload;
 
 import org.cloudbus.cloudsim.Log;
 import org.cloudbus.cloudsim.core.CloudSim;
+import org.edgeoffload.model.EdgeDevice;
 import org.edgeoffload.model.Task;
+import org.fog.application.AppModule;
 import org.fog.application.Application;
+import org.fog.entities.Actuator;
+import org.fog.entities.FogBroker;
 import org.fog.entities.FogDevice;
+import org.fog.entities.Sensor;
 import org.fog.placement.Controller;
 import org.fog.placement.ModuleMapping;
 import org.fog.placement.ModulePlacementEdgewards;
+import org.fog.placement.ModulePlacementMapping;
 import org.fog.utils.TimeKeeper;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
 
 public class OffloadMain {
+
+    static List<Sensor> sensors = new ArrayList<>();
+    static List<Actuator> actuators = new ArrayList<>();
 
     public static void main(String[] args) {
 
@@ -26,19 +32,102 @@ public class OffloadMain {
         CloudSim.init(num_user, calendar, trace_flag);
         String appId = "edge_offload";
 
+        try{
 
-        ApplicationHandler applicationHandler = new ApplicationHandler();
+            FogBroker broker = new FogBroker("broker");
+
+
+            ApplicationHandler applicationHandler = new ApplicationHandler(broker.getId());
+            List<Application> applications = applicationHandler.ListApplications();
+
+            //create a list of tasks with depedent tasks
+            List<Task> tasks = createApplicationsTasksList(applicationHandler, broker.getId());
+
+            //get all the fog devices created
+            EdgeServer edgeServer = new EdgeServer();
+            List<FogDevice> edgeServers = edgeServer.getFogDevicesList();
+
+            //create an instance of offloader class
+            //based on resource required on availability the tasks are offloaded to suitable edge server
+            TaskOffloader offloader = new TaskOffloader(BL.mapEdgeDevicesToList(edgeServers), tasks);
+            List<EdgeDevice> edgeWithassignedTasks = offloader.assignTasksToEdge();
+
+
+            Controller controller = new Controller("master-controller", edgeServers, new ArrayList<>(), new ArrayList<>());
+            for(EdgeDevice device: edgeWithassignedTasks){
+                // Add the application to the fog devices
+
+                List<Sensor> sensors = new ArrayList<>();
+                List<Actuator> actuators = new ArrayList<>();
+
+                if(!device.getTasks().isEmpty()){
+
+                    FogDevice fogDevice = getFogDevice(edgeServers, device.getName());
+
+                    for(Task task: device.getTasks()){
+                        Application application = getApplication(applications, task.getId());
+                        //application.setAppId(appId);
+
+                        sensors.add(edgeServer.setupSensor(application, fogDevice));
+                        actuators.add(edgeServer.setupActuator(application, fogDevice));
+
+                        //map each application modules to designated edge server, the decision is made in offloader algorithm
+                        ModuleMapping moduleMapping = createModuleMapping(device.getName(), application); // initializing a module mapping
+                       // ModuleMapping moduleMapping = ModuleMapping.createModuleMapping(); // initializing a module mapping
+                       // moduleMapping.addModuleToDevice(application.getModules().get(0).getName(), "cloud");
+                        //moduleMapping.addModuleToDevice(application.getModuleNames().get(0), "cloud");
+
+                        List<FogDevice> fd = new ArrayList<>();
+                        fd.add(fogDevice);
+                        fd.add(getFogDevice(edgeServers, "cloud"));
+
+                        boolean CLOUD = Objects.equals(fogDevice.getName(), "cloud");
+
+                        controller.setSensors(sensors);
+                        controller.setActuators(actuators);
+
+                        controller.submitApplication(application,
+                                (CLOUD)?(new ModulePlacementMapping(fd, application, moduleMapping))
+                                        :(new ModulePlacementEdgewards(fd,
+                                        sensors,
+                                        actuators,
+                                        application, moduleMapping)));
+                    }
+                }
+            }
+
+            TimeKeeper.getInstance().setSimulationStartTime(Calendar.getInstance().getTimeInMillis());
+
+            CloudSim.startSimulation();
+
+            CloudSim.stopSimulation();
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.printLine("Unwanted errors happen");
+        }
+
+
+
+    }
+
+    //create application using IFogSim classes and add dependency
+    private static List<Task> createApplicationsTasksList(ApplicationHandler applicationHandler, int userId){
+
+
         ArrayList<Application> applicationslist = new ArrayList<>();
 
         //independent tasks
-        applicationslist.add(applicationHandler.getTempControlApplication());
+        applicationslist.add(applicationHandler.getClientApplication());
         applicationslist.add(applicationHandler.getUniDirectionalApplication());
 
         //dependent tasks
         ApplicationDependency applicationDependency = new ApplicationDependency();
 
-        org.fog.application.DAG dag = applicationDependency.createApplicationDepedency();
+        org.fog.application.DAG dag = applicationDependency.createApplicationDependency(userId);
 
+        //this sorts the tasks in a hierarchical way for application execution order
         Stack stack = dag.topologicalSort();
 
         List<Stack> stacks = new ArrayList<>();
@@ -46,37 +135,35 @@ public class OffloadMain {
 
         List<Task> tasks =  applicationDependency.createApplicationDepdendencyList(applicationHandler.ListApplications(), applicationslist, stacks);
 
-        EdgeServer edgeDevice = new EdgeServer();
-        List<FogDevice> fogDevices = edgeDevice.getFogDevicesList();
+        return tasks;
+    }
 
-        TaskOffloader offloader = new TaskOffloader(BL.mapEdgeDevicesToList(fogDevices), tasks);
-        offloader.deployTask();
-
-       // OffloadAlgorithm.offloadingStrategy(applist, fogDevices);
-
-        Application cameraApplication = applicationHandler.getCameraApplicaion();
+    //Map the application modules to each selected Edge device in offload algorithm
+    private static ModuleMapping createModuleMapping(String deviceName ,Application application){
         ModuleMapping moduleMapping = ModuleMapping.createModuleMapping(); // initializing a module mapping
 
-        for(FogDevice device : fogDevices){
-            if(device.getName().startsWith("m"))
-                moduleMapping.addModuleToDevice("image-capture", device.getName());  // fixing 1 instance of the Motion Detector module to each Smart Camera
+        for(AppModule module: application.getModules()){
+            //moduleMapping.addModuleToDevice(module.getName(), "cloud");
+            moduleMapping.addModuleToDevice(module.getName(), deviceName);
         }
+              // fixing 1 instance of the application module to specified edge device
 
-        //for(AppModule appModule: cameraApplication.getModules())
-         //   moduleMapping.addModuleToDevice(appModule.getName(), edgeDevice.mobileDevice().getName());
+        return moduleMapping;
+    }
 
-        List<FogDevice> devices = new ArrayList<>();
-        devices.add(edgeDevice.createMobileDevice());
+    private static FogDevice getFogDevice(List<FogDevice> fogDevices, String deviceName){
+        Optional<FogDevice> device = fogDevices.stream()
+                .filter(fogDevice -> fogDevice.getName().equals(deviceName))
+                .findFirst();
 
-        // Add the application to the fog devices
-        Controller controller = new Controller("master-controller", devices, new ArrayList<>(), new ArrayList<>());
-        ModulePlacementEdgewards placement = new ModulePlacementEdgewards(devices, new ArrayList<>(), new ArrayList<>(), applicationHandler.getCameraApplicaion(), moduleMapping);
-        controller.submitApplication(cameraApplication, 0, placement);
+        return device.get();
+    }
 
-        TimeKeeper.getInstance().setSimulationStartTime(Calendar.getInstance().getTimeInMillis());
+    private static Application getApplication(List<Application> applications, String appName){
+        Optional<Application> application = applications.stream()
+                .filter(app -> app.getAppId().equals(appName))
+                .findFirst();
 
-        CloudSim.startSimulation();
-
-        CloudSim.stopSimulation();
+        return application.get();
     }
 }

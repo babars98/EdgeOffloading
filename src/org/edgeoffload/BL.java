@@ -10,6 +10,8 @@ import org.fog.application.Application;
 import org.fog.entities.FogDevice;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public  class BL {
@@ -95,6 +97,8 @@ public  class BL {
     public static List<EdgeDevice> mapEdgeDevicesToList(List<FogDevice> devices){
         List<EdgeDevice> edgeDevices = new ArrayList<>();
 
+        sortFogDevicesByLevelDesc(devices);
+
         for(FogDevice fogDevice: devices){
 
             edgeDevices.add(new EdgeDevice(
@@ -106,5 +110,14 @@ public  class BL {
             ));
         }
         return  edgeDevices;
+    }
+
+    private static void sortFogDevicesByLevelDesc(List<FogDevice> fogDevices) {
+        Collections.sort(fogDevices, new Comparator<FogDevice>() {
+            @Override
+            public int compare(FogDevice device1, FogDevice device2) {
+                return Integer.compare(device2.getLevel(), device1.getLevel());
+            }
+        });
     }
 }

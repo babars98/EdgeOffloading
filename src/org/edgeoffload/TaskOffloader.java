@@ -1,11 +1,9 @@
 package org.edgeoffload;
 
-import com.google.common.collect.Multimaps;
 import org.edgeoffload.model.EdgeDevice;
 import org.edgeoffload.model.Task;
-import org.fog.application.Application;
+import org.fog.gui.core.Edge;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,10 +15,11 @@ public class TaskOffloader {
     private List<Task> taskList;
     private List<Task> taskQueue;
     private EdgeDevice cloud;
+    private String cloudName = "cloud";
 
     public TaskOffloader(List<EdgeDevice> edgeDevices, List<Task> tasks) {
         this.edgeDevices = edgeDevices;
-        cloud = edgeDevices.stream().filter(a -> a.getName().equals("cloud")).collect(Collectors.toList()).get(0);
+        cloud = edgeDevices.stream().filter(a -> a.getName().equals(cloudName)).collect(Collectors.toList()).get(0);
         this.edgeDevices.remove(cloud);
         this.taskList = tasks;
         taskQueue = new ArrayList<>();
@@ -28,7 +27,7 @@ public class TaskOffloader {
 
 
     //Deploy tasks to edge
-    public void deployTask() {
+    public List<EdgeDevice> assignTasksToEdge() {
 
         Iterator<Task> iterator = taskList.iterator();
         while(!taskList.isEmpty()){
@@ -45,6 +44,9 @@ public class TaskOffloader {
             offloadTasksToCloud(taskQueue);
         }
 
+        //
+        edgeDevices.add(cloud);
+        return edgeDevices;
     }
 
     //check if the edge device has enough resources
@@ -89,6 +91,9 @@ public class TaskOffloader {
                    }
                 }
             }
+
+            //offload tasks to cloud if there is no device with enough resource available in the pool
+            offloadTasksToCloud(tasks);
         }
     }
 

@@ -8,25 +8,20 @@ import java.util.*;
 
 public class ApplicationDependency {
 
-    public org.fog.application.DAG createApplicationDepedency(){
+    public org.fog.application.DAG createApplicationDependency(int userId){
 
 
-        ApplicationHandler applicationHandler = new ApplicationHandler();
+        ApplicationHandler applicationHandler = new ApplicationHandler(userId);
 
         Application cameraApp = applicationHandler.getCameraApplicaion();
         Application imageProcesingApp = applicationHandler.getImageProcessorApplication();
-        Application imageClassificationApp = applicationHandler.getImageClassificationApplication();
 
-        List<String> appList = Arrays.asList(cameraApp.getAppId(), imageProcesingApp.getAppId(), imageClassificationApp.getAppId());
+        List<String> appList = Arrays.asList(cameraApp.getAppId(), imageProcesingApp.getAppId());
 
         DAG dag = new DAG(appList);
 
-
         // Define dependencies for Application 1
         dag.addEdge(cameraApp.getAppId(), imageProcesingApp.getAppId());
-
-        // Define dependencies for Application 2
-        dag.addEdge(imageProcesingApp.getAppId(), imageClassificationApp.getAppId());
 
 
         return dag;
@@ -53,7 +48,7 @@ public class ApplicationDependency {
 
             String uId =  UUID.randomUUID().toString();
 
-            while (stack.empty() == false){
+            while (!stack.empty()){
                 Application app = BL.getApplicationbyName(applications, stack.pop().toString());
 
                 list.add(new Task(
