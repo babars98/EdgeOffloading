@@ -35,14 +35,14 @@ public class EdgeServer {
     }
 
     public FogDevice createEdgeDevice1(){
-        FogDevice dept = createAFogDevice("FogDevice1", 10000, 4096, 10000, 10000, 1, 0.0, 107.339, 83.4333);
+        FogDevice dept = createAFogDevice("FogDevice1", 5000, 2048, 10000, 10000, 1, 0.0, 107.339, 83.4333);
         dept.setUplinkLatency(5);
 
         return dept;
     }
 
     public FogDevice createEdgeDevice2(){
-        FogDevice dept = createAFogDevice("FogDevice2", 15000, 8096, 10000, 10000, 1, 0.0, 107.339, 83.4333);
+        FogDevice dept = createAFogDevice("FogDevice2", 10000, 4096, 10000, 10000, 1, 0.0, 107.339, 83.4333);
         dept.setUplinkLatency(7);
         return dept;
     }

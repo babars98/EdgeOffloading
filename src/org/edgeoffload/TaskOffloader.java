@@ -69,6 +69,7 @@ public class TaskOffloader {
     private void deployDependentTask(Task dependentTask) {
 
         List<Task> tasks = GroupDependentTask(dependentTask);
+        boolean taskMigrated = false;
 
         //Check the edge devices for sufficient resource to offload the dependent tasks
         boolean isOffloaded = OffloadTasktoEdgeWithResourceAvailable(tasks);
@@ -82,20 +83,20 @@ public class TaskOffloader {
                 if (device.getTotalMips() * resourceLimit >= BL.calculateTotalMips(tasks) &&
                         device.getTotalRam() * resourceLimit >= BL.calculateTotalRam(tasks)) {
 
-                   boolean res = migrateTasksToFit(device, tasks);
+                    taskMigrated = migrateTasksToFit(device, tasks);
 
                    ///if suitable device found offload tasks there
-                   if(res){
+                   if(taskMigrated){
                        offloadTasksToServer(tasks, device);
                    }
-                   //if no suitable device found which can accommodate the dependent tasks, deploy tasks on separate edge devices
-                   else{
-                       for(Task task: tasks){
-                           //using the method will deploy the application to
-                           deployIndependentTask(task);
-                       }
-                   }
                 }
+            }
+        }
+        //if no suitable device found which can accommodate the dependent tasks, deploy tasks on separate edge devices
+        if (!taskMigrated && !isOffloaded){
+            for(Task task: tasks){
+                //using the method will deploy the application to
+                deployIndependentTask(task);
             }
         }
     }

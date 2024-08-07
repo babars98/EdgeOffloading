@@ -94,12 +94,7 @@ fff.add(fd);
 
         TimeKeeper.getInstance().setSimulationStartTime(Calendar.getInstance().getTimeInMillis());
 
-        TimeKeeper timeKeeper = TimeKeeper.getInstance();
-        Map<String, Double> tupleCompletionTimes = timeKeeper.getTupleTypeToAverageCpuTime();
 
-// Accessing the average latency for a specific tuple type
-        double averageLatency = tupleCompletionTimes.get("PTZ_PARAMS");
-        System.out.println("Average Latency for tupleType: " + averageLatency);
 
         CloudSim.startSimulation();
 

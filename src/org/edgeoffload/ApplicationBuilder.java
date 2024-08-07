@@ -36,7 +36,7 @@ public class ApplicationBuilder {
                 "PTZ_PARAMS", new FractionalSelectivity(1.0));
 
         final AppLoop loop1 = new AppLoop(new ArrayList<String>()
-        {{add("CAMERA");
+        {{add("SENSOR");
             add("picture-capture");add("slot-detector");
             add("PTZ_CONTROL");}});
         List<AppLoop> loops = new ArrayList<AppLoop>(){{add(loop1);}};
@@ -82,6 +82,7 @@ public class ApplicationBuilder {
 
         application.setLoops(loops);
         return application;
+
     }
 
     public Application createClientApplication(String appId, int userId){
@@ -133,39 +134,46 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("clientModule", 10); // adding module Client to the application model
-        application.addAppModule("processingModule", 10); // adding module Concentration Calculator to the application model
-        application.addAppModule("storageModule", 10); // adding module Connector to the application model
+        application.addAppModule("clientModule", 128);
+        application.addAppModule("mService1", 128);
+        application.addAppModule("mService2", 128);
+        application.addAppModule("mService3", 256);
 
         /*
          * Connecting the application modules (vertices) in the application model (directed graph) with edges
          */
-        application.addAppEdge("SENSOR", "clientModule", 3000, 500, "M-SENSOR", Tuple.UP, AppEdge.SENSOR);
-        application.addAppEdge("clientModule", "processingModule", 3500, 500, "RAW_DATA", Tuple.UP, AppEdge.MODULE); // adding edge from Client to Concentration Calculator module carrying tuples of type _SENSOR
-        application.addAppEdge("processingModule", "storageModule", 1000, 1000, "PROCESSED_DATA", Tuple.UP, AppEdge.MODULE); // adding periodic edge (period=1000ms) from Concentration Calculator to Connector module carrying tuples of type PLAYER_GAME_STATE
-        application.addAppEdge("processingModule", "clientModule", 14, 500, "ACTION_COMMAND", Tuple.DOWN, AppEdge.MODULE);  // adding edge from Concentration Calculator to Client module carrying tuples of type CONCENTRATION
-        application.addAppEdge("clientModule", "PTZ_CONTROL", 1000, 500, "ACTUATION_SIGNAL", Tuple.DOWN, AppEdge.ACTUATOR);  // adding edge from Client module to Display (actuator) carrying tuples of type SELF_STATE_UPDATE
+
+        application.addAppEdge("SENSOR", "clientModule", 500, 200, "SENSOR", Tuple.UP, AppEdge.SENSOR);
+        application.addAppEdge("clientModule", "mService1", 500, 150, "RAW_DATA", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("mService1", "mService2", 300, 170, "FILTERED_DATA1", Tuple.UP, AppEdge.MODULE);
+        application.addAppEdge("mService1", "mService3", 800, 200, "FILTERED_DATA2", Tuple.UP, AppEdge.MODULE);
+
+        application.addAppEdge("mService2", "clientModule", 14, 200, "RESULT1", Tuple.DOWN, AppEdge.MODULE);
+        application.addAppEdge("mService3", "clientModule", 28, 150, "RESULT2", Tuple.DOWN, AppEdge.MODULE);
+        application.addAppEdge("clientModule", "PTZ_CONTROL", 14, 170, "RESULT1_DISPLAY", Tuple.DOWN, AppEdge.ACTUATOR);
+        application.addAppEdge("clientModule", "PTZ_CONTROL", 14, 150, "RESULT2_DISPLAY", Tuple.DOWN, AppEdge.ACTUATOR);
+
 
         /*
          * Defining the input-output relationships (represented by selectivity) of the application modules.
          */
-        application.addTupleMapping("clientModule", "M-SENSOR", "RAW_DATA", new FractionalSelectivity(1.0)); // 0.9 tuples of type _SENSOR are emitted by Client module per incoming tuple of type EEG
-        application.addTupleMapping("processingModule", "RAW_DATA", "PROCESSED_DATA", new FractionalSelectivity(1.0)); // 1.0 tuples of type SELF_STATE_UPDATE are emitted by Client module per incoming tuple of type CONCENTRATION
-        application.addTupleMapping("processingModule", "RAW_DATA", "ACTION_COMMAND", new FractionalSelectivity(1.0)); // 1.0 tuples of type CONCENTRATION are emitted by Concentration Calculator module per incoming tuple of type _SENSOR
-        application.addTupleMapping("clientModule", "ACTION_COMMAND", "ACTUATION_SIGNAL", new FractionalSelectivity(1.0)); // 1.0 tuples of type GLOBAL_STATE_UPDATE are emitted by Client module per incoming tuple of type GLOBAL_GAME_STATE
+        application.addTupleMapping("clientModule", "SENSOR", "RAW_DATA", new FractionalSelectivity(0.9));
+        application.addTupleMapping("mService1", "RAW_DATA", "FILTERED_DATA1", new FractionalSelectivity(1.0));
+        application.addTupleMapping("mService1", "RAW_DATA", "FILTERED_DATA2", new FractionalSelectivity(1.0));
+        application.addTupleMapping("mService2", "FILTERED_DATA1", "RESULT1", new FractionalSelectivity(1.0));
+        application.addTupleMapping("mService3", "FILTERED_DATA2", "RESULT2", new FractionalSelectivity(1.0));
+        application.addTupleMapping("clientModule", "RESULT1", "RESULT1_DISPLAY", new FractionalSelectivity(1.0));
+        application.addTupleMapping("clientModule", "RESULT2", "RESULT2_DISPLAY", new FractionalSelectivity(1.0));
 
-        application.setSpecialPlacementInfo("storageModule", "cloud");
-        /*
-         * Defining application loops to monitor the latency of.
-         * Here, we add only one loop for monitoring : EEG(sensor) -> Client -> Concentration Calculator -> Client -> DISPLAY (actuator)
-         */
         final AppLoop loop1 = new AppLoop(new ArrayList<String>() {{
-            add("M-SENSOR");
+            add("SENSOR");
             add("clientModule");
-            add("processingModule");
+            add("mService1");
+            add("mService2");
             add("clientModule");
             add("PTZ_CONTROL");
         }});
+
         List<AppLoop> loops = new ArrayList<AppLoop>() {{
             add(loop1);
         }};
