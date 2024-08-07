@@ -41,6 +41,7 @@ public class TaskOffloader {
 
         //Deploy all remaining tasks to Cloud, if no edge server with enough resources available
         if(!taskQueue.isEmpty()){
+            //offload tasks to cloud if there is no device with enough resource available in the pool
             offloadTasksToCloud(taskQueue);
         }
 
@@ -83,17 +84,19 @@ public class TaskOffloader {
 
                    boolean res = migrateTasksToFit(device, tasks);
 
+                   ///if suitable device found offload tasks there
                    if(res){
-                       offloadTasksToEdge(tasks, device);
+                       offloadTasksToServer(tasks, device);
                    }
+                   //if no suitable device found which can accommodate the dependent tasks, deploy tasks on separate edge devices
                    else{
-                       offloadTasksToCloud(tasks);
+                       for(Task task: tasks){
+                           //using the method will deploy the application to
+                           deployIndependentTask(task);
+                       }
                    }
                 }
             }
-
-            //offload tasks to cloud if there is no device with enough resource available in the pool
-            offloadTasksToCloud(tasks);
         }
     }
 
@@ -169,7 +172,7 @@ public class TaskOffloader {
         return isSpacefreed ? tasksToMigrate : new ArrayList<>();
     }
 
-    private void offloadTasksToEdge(List<Task> tasks, EdgeDevice device){
+    private void offloadTasksToServer(List<Task> tasks, EdgeDevice device){
         for (Task task : tasks){
             device.addTask(task);
             taskList.remove(task);
@@ -177,7 +180,7 @@ public class TaskOffloader {
     }
 
     private void offloadTasksToCloud(List<Task> tasks){
-        offloadTasksToEdge(tasks, cloud);
+        offloadTasksToServer(tasks, cloud);
     }
 
     // Function to sort a list of tasks based on MIPS and RAM in descending order
