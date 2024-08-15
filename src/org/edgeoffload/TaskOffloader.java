@@ -2,7 +2,6 @@ package org.edgeoffload;
 
 import org.edgeoffload.model.EdgeDevice;
 import org.edgeoffload.model.Task;
-import org.fog.gui.core.Edge;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,6 +28,8 @@ public class TaskOffloader {
     //Deploy tasks to edge
     public List<EdgeDevice> assignTasksToEdge() {
 
+        System.out.println("Offloading Algorithm.");
+
         while(!taskList.isEmpty()){
             Task task = taskList.get(0);
             if (task.isDependent()) {
@@ -52,20 +53,25 @@ public class TaskOffloader {
     //check if the edge device has enough resources
     private void deployIndependentTask(Task task) {
 
+        System.out.println("Deploying Task.");
         EdgeDevice device = findSuitableServer(task);
         if (device != null) {
             device.addTask(task);
             taskList.remove(task);
+            System.out.println("Deployed Task " + task.getId() + " to Edge server " + device.getName());
             return;
         }
 
         //Add tasks to task queue if resources are not sufficient
         taskList.remove(task);
+        System.out.println("No Edge server with sufficient resources found.");
         taskQueue.add(task);
+        System.out.println("Task " + task.getId() + "added to task queue");
     }
 
     private void deployDependentTask(Task dependentTask) {
 
+        System.out.println("Deploying dependent task(s)");
         List<Task> tasks = GroupDependentTask(dependentTask);
         boolean taskMigrated = false;
 
@@ -76,7 +82,9 @@ public class TaskOffloader {
         //to ensure if there is any independent application is deployed
         if(!isOffloaded) {
 
-            EdgeDevice device = findSuitableServer(tasks);
+            //find the edge server where other tasks are already deployed
+            //The dependent tasks has the priority and the other tasks would be offloaded from that server
+            EdgeDevice device = findSuitableServerforDependentTasks(tasks);
 
             //if the device is available to host the task
             if(device != null)
@@ -90,6 +98,8 @@ public class TaskOffloader {
         }
         //if no suitable device found which can accommodate the dependent tasks, deploy tasks on separate edge devices
         if (!taskMigrated && !isOffloaded){
+            System.out.println("Could not find the suitable server for dependent tasks.");
+            System.out.println("Deploying dependent tasks to different edge servers.");
             for(Task task: tasks){
                 //using the method will deploy the application to
                 deployIndependentTask(task);
@@ -99,12 +109,15 @@ public class TaskOffloader {
 
     private boolean OffloadTasktoEdgeWithResourceAvailable(List<Task> tasks){
 
+        System.out.println("finding the suitable server for dependent tasks");
+
         EdgeDevice device = findSuitableServer(tasks);
 
         if(device != null){
             for (Task task : tasks){
                 device.addTask(task);
                 taskList.remove(task);
+                System.out.println("Deployed Task " + task.getId() + " to Edge server " + device.getName());
             }
         }
 
@@ -115,15 +128,18 @@ public class TaskOffloader {
     //resource available for depedent tasks
     private boolean migrateTasksToFit(EdgeDevice targetDevice, List<Task> dependentTasks) {
 
+        System.out.println("Migrating the tasks to make resource available for dependent tasks");
         List<Task> tasksToMigrate = findTasksToMigrate(targetDevice, dependentTasks);
         boolean flage = false;
         if(tasksToMigrate.isEmpty()){
             flage = false;
         }
         else{
+            System.out.println("Migrating independent tasks from Edge server.");
             for (Task task : tasksToMigrate) {
                 targetDevice.removeTask(task);
                 taskList.add(task);
+                System.out.println("Migrated Task " + task.getId() + " from Edge server " + targetDevice.getName());
                 flage = true;
             }
         }
@@ -214,14 +230,49 @@ public class TaskOffloader {
         return  selectedDevice;
     }
 
+    //find the edge server which has sufficient resources and has the least latency
+    //This method ignores the deployed tasks and check the total resource to check whether
+    //the dependent tasks requirements meet
+    private EdgeDevice findSuitableServerforDependentTasks(List<Task> tasks) {
+
+        int totalMips = BL.calculateTotalMips(tasks);
+        int totalRam = BL.calculateTotalRam(tasks);
+        int totalBW = BL.calculateTotalBW(tasks);
+
+        EdgeDevice selectedDevice = null;
+        double lowestLatency = Double.MAX_VALUE;
+
+        for (EdgeDevice device : edgeDevices) {
+
+            if (device.getTotalMips() * resourceLimit >= totalMips &&
+                    device.getTotalRam() * resourceLimit >= totalRam &&
+                    device.getTotalRam() > totalBW) {
+
+                double currentLatency = device.getLatency(); // Method to get the latency of the device
+
+                // Check if this device has the lowest latency so far
+                if (currentLatency < lowestLatency) {
+                    lowestLatency = currentLatency;
+                    selectedDevice = device;
+
+                }
+            }
+        }
+
+        return  selectedDevice;
+    }
+
+
     private void offloadTasksToServer(List<Task> tasks, EdgeDevice device){
         for (Task task : tasks){
             device.addTask(task);
             taskList.remove(task);
+            System.out.println("Offloaded task " + task.getId() + " to edge server " + device.getName());
         }
     }
 
     private void offloadTasksToCloud(List<Task> tasks){
+        System.out.println("Offloading tasks to the cloud.");
         offloadTasksToServer(tasks, cloud);
     }
 

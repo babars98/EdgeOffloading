@@ -31,6 +31,8 @@ public class OffloadMain {
 
         try{
 
+            System.out.println("Application started.");
+
             FogBroker broker = new FogBroker("broker");
 
 
