@@ -29,6 +29,7 @@ public class EdgeServer {
     private final String acuatorType = "PTZ_CONTROL";
     private HashMap<String, Double> sensorLatency = new HashMap<String, Double>();
     private HashMap<String, Double> actuatorLatency = new HashMap<String, Double>();
+    static List<FogDevice> fogDevices = new ArrayList<FogDevice>();
 
     public EdgeServer(){
         setSensorLatencies();
@@ -79,6 +80,10 @@ public class EdgeServer {
         return fogDevices;
     }
 
+    public List<FogDevice> getFogDevices(){
+        return fogDevices;
+    }
+
     public Sensor setupSensor(Application app, FogDevice edgeDevice) {
         // Define and add sensors specific to this app
         Sensor sensor = new Sensor("sensor-"+app.getAppId(), sensorTupleType, app.getUserId(), app.getAppId(), new DeterministicDistribution(5.0));
@@ -106,12 +111,51 @@ public class EdgeServer {
         sensorLatency.put("FogDevice2", 5.0);
         sensorLatency.put("FogDevice3", 7.0);
         sensorLatency.put("mobile", 1.0);
+        sensorLatency.put("cloud", 100.0);
 
         //actuator latency for each server
         actuatorLatency.put("FogDevice1", 3.0);
         actuatorLatency.put("FogDevice2", 5.0);
         actuatorLatency.put("FogDevice3", 7.0);
         actuatorLatency.put("mobile", 1.0);
+        actuatorLatency.put("cloud", 100.0);
+
+    }
+
+    public void createFogDevices() {
+        FogDevice cloud = createAFogDevice("cloud", 44800, 40000, 100, 10000, 0, 0.01, 16*103, 16*83.25); // creates the fog device Cloud at the apex of the hierarchy with level=0
+        cloud.setParentId(-1);
+        FogDevice proxy = createAFogDevice("proxy-server", 2800, 4000, 10000, 10000, 1, 0.0, 107.339, 83.4333); // creates the fog device Proxy Server (level=1)
+        proxy.setParentId(cloud.getId()); // setting Cloud as parent of the Proxy Server
+        proxy.setUplinkLatency(100); // latency of connection from Proxy Server to the Cloud is 100 ms
+
+        fogDevices.add(cloud);
+        fogDevices.add(proxy);
+
+        for(int i=1;i<4;i++){
+            addGw(i+"", proxy.getId()); // adding a fog device for every Gateway in physical topology. The parent of each gateway is the Proxy Server
+        }
+
+    }
+
+    private static FogDevice addGw(String id, int parentId){
+        FogDevice dept = createAFogDevice("FogDevice"+id, 2800, 4000, 10000, 10000, 1, 0.0, 107.339, 83.4333);
+        fogDevices.add(dept);
+        dept.setParentId(parentId);
+        dept.setUplinkLatency(4); // latency of connection between gateways and proxy server is 4 ms
+        for(int i=1;i<2;i++){
+            String mobileId = id+"-"+i;
+            FogDevice mobile = addMobile(mobileId, dept.getId()); // adding mobiles to the physical topology. Smartphones have been modeled as fog devices as well.
+            mobile.setUplinkLatency(i*5); // latency of connection between the smartphone and proxy server is 4 ms
+            fogDevices.add(mobile);
+        }
+        return dept;
+    }
+
+    private static FogDevice addMobile(String id, int parentId){
+        FogDevice mobile = createAFogDevice("m-"+id, 2000, 1500, 10000, 270, 3, 0, 87.53, 82.44);
+        mobile.setParentId(parentId);
+        return mobile;
     }
 
     private static org.fog.entities.FogDevice createAFogDevice(String nodeName, long mips, int ram, long upBw, long downBw, int level, double ratePerMips, double busyPower, double idlePower) {

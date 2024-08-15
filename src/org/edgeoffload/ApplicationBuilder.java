@@ -16,19 +16,20 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("picture-capture", 10);
-        application.addAppModule("slot-detector", 10);
+        application.addAppModule("picture-capture", 256);
+        application.addAppModule("slot-detector", 1024);
 
         /*
          * Connecting the application modules (vertices) in the application model (directed graph) with edges
          */
-        application.addAppEdge("SENSOR", "picture-capture", 1000, 500, "CAMERA", Tuple.UP, AppEdge.SENSOR); // adding edge from CAMERA (sensor) to Motion Detector module carrying tuples of type CAMERA
+        application.addAppEdge("SENSOR", "picture-capture", 1000, 700, "CAMERA", Tuple.UP, AppEdge.SENSOR); // adding edge from CAMERA (sensor) to Motion Detector module carrying tuples of type CAMERA
         application.addAppEdge("picture-capture", "slot-detector",
-                1000, 500, "slots",Tuple.UP, AppEdge.MODULE);
+                1500, 500, "slots",Tuple.UP, AppEdge.MODULE);
         // adding edge from Slot Detector to PTZ CONTROL (actuator)
         application.addAppEdge("slot-detector", "PTZ_CONTROL", 100,
-                28, 100, "PTZ_PARAMS",
+                800, 500, "PTZ_PARAMS",
                 Tuple.UP, AppEdge.ACTUATOR);
+
 
         application.addTupleMapping("picture-capture", "SENSOR", "slots",
                 new FractionalSelectivity(1.0));
@@ -51,19 +52,19 @@ public class ApplicationBuilder {
         /*
          * Adding modules (vertices) to the application model (directed graph)
          */
-        application.addAppModule("object_detector", 10);
-        application.addAppModule("motion_detector", 10);
-        application.addAppModule("object_tracker", 10);
-        application.addAppModule("user_interface", 10);
+        application.addAppModule("object_detector", 512);
+        application.addAppModule("motion_detector", 512);
+        application.addAppModule("object_tracker", 512);
+        application.addAppModule("user_interface", 1024);
 
         /*
          * Connecting the application modules (vertices) in the application model (directed graph) with edges
          */
-        application.addAppEdge("SENSOR", "motion_detector", 1000, 20000, "CAMERA", Tuple.UP, AppEdge.SENSOR); // adding edge from CAMERA (sensor) to Motion Detector module carrying tuples of type CAMERA
+        application.addAppEdge("SENSOR", "motion_detector", 1000, 2000, "CAMERA", Tuple.UP, AppEdge.SENSOR); // adding edge from CAMERA (sensor) to Motion Detector module carrying tuples of type CAMERA
         application.addAppEdge("motion_detector", "object_detector", 2000, 2000, "MOTION_VIDEO_STREAM", Tuple.UP, AppEdge.MODULE); // adding edge from Motion Detector to Object Detector module carrying tuples of type MOTION_VIDEO_STREAM
         application.addAppEdge("object_detector", "user_interface", 500, 2000, "DETECTED_OBJECT", Tuple.UP, AppEdge.MODULE); // adding edge from Object Detector to User Interface module carrying tuples of type DETECTED_OBJECT
         application.addAppEdge("object_detector", "object_tracker", 1000, 100, "OBJECT_LOCATION", Tuple.UP, AppEdge.MODULE); // adding edge from Object Detector to Object Tracker module carrying tuples of type OBJECT_LOCATION
-        application.addAppEdge("object_tracker", "PTZ_CONTROL", 100, 28, 100, "PTZ_PARAMS", Tuple.DOWN, AppEdge.ACTUATOR); // adding edge from Object Tracker to PTZ CONTROL (actuator) carrying tuples of type PTZ_PARAMS
+        application.addAppEdge("object_tracker", "PTZ_CONTROL", 100, 300, 100, "PTZ_PARAMS", Tuple.DOWN, AppEdge.ACTUATOR); // adding edge from Object Tracker to PTZ CONTROL (actuator) carrying tuples of type PTZ_PARAMS
 
         /*
          * Defining the input-output relationships (represented by selectivity) of the application modules.
@@ -176,6 +177,38 @@ public class ApplicationBuilder {
 
         List<AppLoop> loops = new ArrayList<AppLoop>() {{
             add(loop1);
+        }};
+        application.setLoops(loops);
+
+        return application;
+    }
+
+    public Application createDataApplication(String appId, int userId) {
+        Application application = Application.createApplication(appId, userId);
+
+        // Adding modules with RAM and MIPS requirements
+        application.addAppModule("data_preprocessing", 512, 1000, 200); // 1500 MIPS, 512 MB RAM
+        application.addAppModule("data_analysis", 512, 1000, 200); // 2500 MIPS, 1024 MB RAM
+        application.addAppModule("data_storage", 256, 500, 300); // 1000 MIPS, 2048 MB RAM
+
+        // Adding edges with bandwidth requirements
+        application.addAppEdge("SENSOR", "data_preprocessing", 2000, 1000, "SENSOR_DATA", Tuple.UP, AppEdge.SENSOR); // 2000 bytes, 1000ms
+        application.addAppEdge("data_preprocessing", "data_analysis", 5000, 500, "PROCESSED_DATA", Tuple.UP, AppEdge.MODULE); // 5000 bytes, 500ms
+        application.addAppEdge("data_analysis", "data_storage", 10000, 200, "ANALYZED_DATA", Tuple.UP, AppEdge.MODULE); // 10000 bytes, 200ms
+
+        // Tuple mapping
+        application.addTupleMapping("data_preprocessing", "SENSOR_DATA", "PROCESSED_DATA", new FractionalSelectivity(1.0));
+        application.addTupleMapping("data_analysis", "PROCESSED_DATA", "ANALYZED_DATA", new FractionalSelectivity(1.0));
+
+        // Creating an application loop (optional, for monitoring purposes)
+        final AppLoop loop = new AppLoop(new ArrayList<String>() {{
+            add("SENSOR");
+            add("data_preprocessing");
+            add("data_analysis");
+            add("data_storage");
+        }});
+        List<AppLoop> loops = new ArrayList<AppLoop>() {{
+            add(loop);
         }};
         application.setLoops(loops);
 

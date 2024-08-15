@@ -20,9 +20,6 @@ import java.util.*;
 
 public class OffloadMain {
 
-    static List<Sensor> sensors = new ArrayList<>();
-    static List<Actuator> actuators = new ArrayList<>();
-
     public static void main(String[] args) {
 
         Log.disable();

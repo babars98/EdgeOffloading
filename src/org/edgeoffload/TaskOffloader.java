@@ -10,12 +10,12 @@ import java.util.stream.Collectors;
 public class TaskOffloader {
 
 
-    private static double resourceLimit = 0.9;
-    private List<EdgeDevice> edgeDevices;
-    private List<Task> taskList;
-    private List<Task> taskQueue;
-    private EdgeDevice cloud;
-    private String cloudName = "cloud";
+    private final double resourceLimit = 0.9;
+    private final List<EdgeDevice> edgeDevices;
+    private final List<Task> taskList;
+    private final List<Task> taskQueue;
+    private final EdgeDevice cloud;
+    private final String cloudName = "cloud";
 
     public TaskOffloader(List<EdgeDevice> edgeDevices, List<Task> tasks) {
         this.edgeDevices = edgeDevices;
@@ -29,7 +29,6 @@ public class TaskOffloader {
     //Deploy tasks to edge
     public List<EdgeDevice> assignTasksToEdge() {
 
-        Iterator<Task> iterator = taskList.iterator();
         while(!taskList.isEmpty()){
             Task task = taskList.get(0);
             if (task.isDependent()) {
@@ -52,19 +51,18 @@ public class TaskOffloader {
 
     //check if the edge device has enough resources
     private void deployIndependentTask(Task task) {
-        for (EdgeDevice device : edgeDevices) {
-            if (device.canAccommodate(task)) {
-                device.addTask(task);
-                taskList.remove(task);
-                return;
-            }
+
+        EdgeDevice device = findSuitableServer(task);
+        if (device != null) {
+            device.addTask(task);
+            taskList.remove(task);
+            return;
         }
 
         //Add tasks to task queue if resources are not sufficient
         taskList.remove(task);
         taskQueue.add(task);
     }
-
 
     private void deployDependentTask(Task dependentTask) {
 
@@ -78,18 +76,16 @@ public class TaskOffloader {
         //to ensure if there is any independent application is deployed
         if(!isOffloaded) {
 
-            for (EdgeDevice device : edgeDevices) {
+            EdgeDevice device = findSuitableServer(tasks);
 
-                if (device.getTotalMips() * resourceLimit >= BL.calculateTotalMips(tasks) &&
-                        device.getTotalRam() * resourceLimit >= BL.calculateTotalRam(tasks)) {
+            //if the device is available to host the task
+            if(device != null)
+                //Remove the assigned independent tasks from the edge device
+                taskMigrated = migrateTasksToFit(device, tasks);
 
-                    taskMigrated = migrateTasksToFit(device, tasks);
-
-                   ///if suitable device found offload tasks there
-                   if(taskMigrated){
-                       offloadTasksToServer(tasks, device);
-                   }
-                }
+            ///if suitable device found, offload dependent tasks there
+            if(taskMigrated){
+                offloadTasksToServer(tasks, device);
             }
         }
         //if no suitable device found which can accommodate the dependent tasks, deploy tasks on separate edge devices
@@ -102,28 +98,17 @@ public class TaskOffloader {
     }
 
     private boolean OffloadTasktoEdgeWithResourceAvailable(List<Task> tasks){
-        int leastLatency = Integer.MAX_VALUE;
 
-        int totalMips = BL.calculateTotalMips(tasks);
-        int totalRam = BL.calculateTotalRam(tasks);
+        EdgeDevice device = findSuitableServer(tasks);
 
-        for (EdgeDevice device : edgeDevices) {
-
-            if (device.getAvailableMips() * resourceLimit >= totalMips &&
-                    device.getAvailableRam() * resourceLimit >= totalRam) {
-
-                for (Task task : tasks){
-                    device.addTask(task);
-                    taskList.remove(task);
-                }
-
-
-                return true;
+        if(device != null){
+            for (Task task : tasks){
+                device.addTask(task);
+                taskList.remove(task);
             }
-            //leastLatency = device.getLatency();
         }
 
-        return  false;
+        return device != null;
     }
 
     //Function to perform Independent tasks migration to other edge to make
@@ -152,8 +137,10 @@ public class TaskOffloader {
         boolean isSpacefreed = false;
         int requiredMips = BL.calculateTotalMips(dependentTasks);
         int requiredRam = BL.calculateTotalRam(dependentTasks);
+        int requiredBW = BL.calculateTotalRam(dependentTasks);
         int availableMips = device.getAvailableMips();
         int availableRam = device.getAvailableRam();
+        int availableBW = device.getAvailableBW();
 
         List<Task> tasks = device.getTasks();
         //sort tasks based on mips and ram asc
@@ -164,13 +151,67 @@ public class TaskOffloader {
                 tasksToMigrate.add(task);
                 availableMips += task.getMips();
                 availableRam += task.getRam();
-                if (availableMips * resourceLimit >= requiredMips && availableRam * resourceLimit >= requiredRam) {
+                availableBW += task.getBW();
+                if (availableMips * resourceLimit >= requiredMips &&
+                        availableRam * resourceLimit >= requiredRam &&
+                        availableBW >= requiredBW) {
                     isSpacefreed = true;
                     break;
                 }
             }
         }
         return isSpacefreed ? tasksToMigrate : new ArrayList<>();
+    }
+
+    //find the best available edge server which has sufficient resources and has the least latency
+    private EdgeDevice findSuitableServer(Task task) {
+        EdgeDevice selectedDevice = null;
+        double lowestLatency = Double.MAX_VALUE;
+
+        for (EdgeDevice device : edgeDevices) {
+            // Check if the device can accommodate the task
+            if (device.canAccommodate(task)) {
+                double currentLatency = device.getLatency(); // Method to get the latency of the device
+
+                // Check if this device has the lowest latency so far
+                if (currentLatency < lowestLatency) {
+                    lowestLatency = currentLatency;
+                    selectedDevice = device;
+                }
+            }
+        }
+
+        return selectedDevice;
+    }
+
+    //find the best available edge server which has sufficient resources and has the least latency
+    private EdgeDevice findSuitableServer(List<Task> tasks) {
+
+        int totalMips = BL.calculateTotalMips(tasks);
+        int totalRam = BL.calculateTotalRam(tasks);
+        int totalBW = BL.calculateTotalBW(tasks);
+
+        EdgeDevice selectedDevice = null;
+        double lowestLatency = Double.MAX_VALUE;
+
+        for (EdgeDevice device : edgeDevices) {
+
+            if (device.getAvailableMips() * resourceLimit >= totalMips &&
+                    device.getAvailableRam() * resourceLimit >= totalRam &&
+                    device.getAvailableBW() > totalBW) {
+
+                double currentLatency = device.getLatency(); // Method to get the latency of the device
+
+                // Check if this device has the lowest latency so far
+                if (currentLatency < lowestLatency) {
+                    lowestLatency = currentLatency;
+                    selectedDevice = device;
+
+                }
+            }
+        }
+
+        return  selectedDevice;
     }
 
     private void offloadTasksToServer(List<Task> tasks, EdgeDevice device){

@@ -39,6 +39,7 @@ public class ApplicationDependency {
                     UUID.randomUUID().toString(),
                     BL.calculateMips(app),
                     BL.calculateRam(app),
+                    BL.calculateBW(app),
                     false
             ));
         }
@@ -56,6 +57,7 @@ public class ApplicationDependency {
                         uId,
                         BL.calculateMips(app),
                         BL.calculateRam(app),
+                        BL.calculateBW(app),
                         true
                 ));
             }

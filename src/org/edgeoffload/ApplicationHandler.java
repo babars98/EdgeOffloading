@@ -46,5 +46,8 @@ public class ApplicationHandler {
     public Application getUniDirectionalApplication(){
         return new ApplicationBuilder().createUniDirectionalApplication("UnidirectionalApplication", user_id);
     }
+    public Application getDataApplication(){
+        return new ApplicationBuilder().createDataApplication("DataApplication", user_id);
+    }
 
 }

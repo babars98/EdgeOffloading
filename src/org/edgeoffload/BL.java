@@ -60,6 +60,15 @@ public  class BL {
         return (int)totalRam;
     }
 
+    public static int calculateBW(Application application) {
+        long totalBW = 0;
+        for (AppModule module : application.getModules()) {
+            totalBW += module.getBw();
+        }
+
+        return (int)totalBW;
+    }
+
     public static int calculateTotalMips(List<Task> tasks){
         int totalMips = 0;
         for (Task task : tasks) {
@@ -76,6 +85,15 @@ public  class BL {
         }
 
         return totalRam;
+    }
+
+    public static int calculateTotalBW(List<Task> tasks){
+        int totalBW = 0;
+        for (Task task : tasks) {
+            totalBW += task.getBW();
+        }
+
+        return totalBW;
     }
 
     public static List<FogDeviceResource> createFogDeviceResourceList(List<FogDevice> fogDevices){
@@ -106,8 +124,9 @@ public  class BL {
                     fogDevice.getName(),
                     fogDevice.getVmAllocationPolicy().getHost(fogDevice.getHost().getId(), fogDevice.getId()).getTotalMips(),
                     fogDevice.getVmAllocationPolicy().getHost(fogDevice.getHost().getId(), fogDevice.getId()).getRam(),
+                    (int)fogDevice.getVmAllocationPolicy().getHost(fogDevice.getHost().getId(), fogDevice.getId()).getBw(),
                     (int)fogDevice.getUplinkLatency()
-            ));
+                    ));
         }
         return  edgeDevices;
     }
